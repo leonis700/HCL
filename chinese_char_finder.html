@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>汉字寻宝 — 找字游戏</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  background: #f0ebe3;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  overflow: hidden;
+}
+#app {
+  width: 100%;
+  max-width: 520px;
+  padding: 12px;
+  position: relative;
+}
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px 14px;
+  font-size: 15px;
+  color: #555;
+  font-weight: 700;
+}
+.top-bar .score { color: #2a7a3e; font-size: 18px; }
+.top-bar .level { color: #666; }
+.top-bar .progress { color: #888; }
+.grid-wrap {
+  position: relative;
+  background: #e6dfd5;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  aspect-ratio: 1;
+}
+.cell {
+  background: #fff;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 700;
+  color: #222;
+  cursor: default;
+  transition: background 0.15s, transform 0.1s, opacity 0.2s;
+  aspect-ratio: 1;
+}
+.cell.active { cursor: pointer; }
+.cell.active:hover { background: #e3f0ff; }
+.cell.active:active { transform: scale(0.93); }
+.cell.selected {
+  background: #f5a623 !important;
+  color: #fff !important;
+  cursor: default;
+}
+.cell.used-correct {
+  background: #a5d6a7 !important;
+  color: #fff !important;
+  opacity: 0.7;
+  cursor: default;
+}
+.pinyin-hint {
+  text-align: center;
+  font-size: 20px;
+  color: #666;
+  font-weight: 700;
+  margin: 10px 0 4px;
+  letter-spacing: 1px;
+}
+.answer-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 16px 0 8px;
+  min-height: 48px;
+}
+.slot {
+  width: 44px;
+  height: 44px;
+  border: 2.5px dashed #bbb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #222;
+  background: #faf8f5;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.slot.filled {
+  border-style: solid;
+  border-color: #f5a623;
+  background: #fff3e0;
+  animation: slotPop 0.2s ease;
+}
+.slot.correct {
+  border-color: #2e7d32;
+  background: #c8e6c9;
+}
+.slot.wrong {
+  border-color: #c62828;
+  background: #ffcdd2;
+  animation: shake 0.3s ease;
+}
+@keyframes slotPop {
+  0% { transform: scale(0.7); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-4px); }
+}
+.status {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  min-height: 32px;
+  line-height: 32px;
+  color: #555;
+}
+.status.correct-msg { color: #2e7d32; }
+.status.wrong-msg { color: #c62828; }
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.78);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.overlay.show { opacity: 1; pointer-events: auto; }
+.overlay .clue-chinese {
+  font-size: clamp(42px, 10vw, 62px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  margin-bottom: 6px;
+  letter-spacing: 6px;
+}
+.overlay .clue-pinyin {
+  font-size: clamp(18px, 4vw, 26px);
+  color: rgba(255,255,255,0.7);
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+.overlay .clue-pinyin-only {
+  font-size: clamp(28px, 6vw, 40px);
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+.overlay .timer {
+  font-size: clamp(56px, 14vw, 80px);
+  font-weight: 900;
+  color: #ffd54f;
+  text-shadow: 0 0 20px rgba(255,213,79,0.3);
+}
+.overlay .subline {
+  font-size: 14px;
+  color: rgba(255,255,255,0.4);
+  margin-top: 6px;
+}
+.complete-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.complete-screen.show { opacity: 1; pointer-events: auto; }
+.complete-screen h2 {
+  font-size: 32px;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.complete-screen .sub {
+  font-size: 18px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 24px;
+}
+.complete-screen .final-score {
+  font-size: 56px;
+  font-weight: 900;
+  color: #ffd54f;
+  margin-bottom: 20px;
+}
+.complete-screen .breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  justify-content: center;
+  max-width: 360px;
+  margin-bottom: 28px;
+}
+.complete-screen .breakdown span {
+  font-size: 16px;
+  color: rgba(255,255,255,0.8);
+}
+.complete-screen .breakdown .ok { color: #81c784; }
+.complete-screen .breakdown .no { color: #e57373; }
+.complete-screen .btn-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+.complete-screen .btn {
+  padding: 12px 28px;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: inherit;
+  border: 2px solid #ffd54f;
+  border-radius: 10px;
+  background: transparent;
+  color: #ffd54f;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.2s;
+}
+.complete-screen .btn:hover { background: rgba(255,213,79,0.1); }
+.complete-screen .btn:active { transform: scale(0.95); }
+.complete-screen .btn.primary {
+  background: #ffd54f;
+  color: #333;
+}
+.complete-screen .btn.primary:hover { background: #ffca28; }
+@media (max-width: 420px) {
+  #app { padding: 6px; }
+  .grid-wrap { padding: 5px; }
+  .grid { gap: 3px; }
+  .cell { font-size: 18px; border-radius: 4px; }
+  .slot { width: 38px; height: 38px; font-size: 18px; }
+  .top-bar { font-size: 13px; padding: 4px 2px 8px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="top-bar">
+    <span class="score">&#9733; <span id="scoreDisplay">0</span></span>
+    <span class="level" id="levelDisplay">Level 1</span>
+    <span class="progress" id="progressDisplay">1 / 10</span>
+  </div>
+
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="pinyin-hint" id="pinyinHint"></div>
+
+  <div class="answer-row" id="answerRow"></div>
+
+  <div class="status" id="statusMsg">Find the characters in order</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="clue-chinese" id="clueChinese"></div>
+  <div class="clue-pinyin" id="cluePinyin"></div>
+  <div class="clue-pinyin-only" id="cluePinyinOnly"></div>
+  <div class="timer" id="timerDisplay">8</div>
+  <div class="subline" id="sublineText">Get ready...</div>
+</div>
+
+<div class="complete-screen" id="completeScreen">
+  <h2 id="completeTitle">Level 1 Complete</h2>
+  <div class="sub" id="completeSub">Great effort!</div>
+  <div class="final-score" id="completeScore">0</div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="btn-row">
+    <button class="btn" id="replayBtn">Replay Level 1</button>
+    <button class="btn primary" id="continueBtn">Continue</button>
+  </div>
+</div>
+
+<script>
+const PHRASES = [
+  { chinese: '短暂休憩', pinyin: '(duǎn zàn xiū qì)' },
+  { chinese: '韵律节奏', pinyin: '(yùn lǜ jié zòu)' },
+  { chinese: '劳逸结合', pinyin: '(láo yì jié hé)' },
+  { chinese: '强健的体魄', pinyin: '(qiáng jiàn de tǐ pò)' },
+  { chinese: '迈开脚步', pinyin: '(mài kāi jiǎo bù)' },
+  { chinese: '抒发感情', pinyin: '(shū fā gǎn qíng)' },
+  { chinese: '运动频率', pinyin: '(yùn dòng pín lǜ)' },
+  { chinese: '大汗淋漓', pinyin: '(dà hàn lín lí)' },
+  { chinese: '汲取营养', pinyin: '(jí qǔ yíng yǎng)' },
+  { chinese: '敞开心扉', pinyin: '(chǎng kāi xīn fēi)' },
+];
+
+const TIMER_SECONDS = 8;
+const COLS = 7, ROWS = 7;
+const GRID_SIZE = COLS * ROWS;
+const PHRASE_COUNT = PHRASES.length;
+
+function buildExclusionSet() {
+  const s = new Set();
+  for (const p of PHRASES) for (const ch of p.chinese) s.add(ch);
+  return s;
+}
+const COMMON_CHARS = '的一是不了人我在有他这中大为上个国到以说时会就也要来用子生自作之如可意者方好于其当面心学开前所发民然道后事行内因经而多公司法成月得想能现等日情头部正点明将相名定关外但看间种高美此门与长从业回见力问由只命无气很请几位那路带公件教管活又常白少很给你手文安们光通民处调习都家地水去火电时理物重工生知性有体合做主知中平及万亲表代位分各做才听西给原指七入千数军目队色东世区决示保山北小世市集增更效极交决受信精五求据才海接维认即讲价达石议根计共部证究量程级技术制史型识林确除使组统号选专许转改走等准团据完厂整收选型领车半引强际土王每厂思件存列品清养造须完府';
+
+const EXCLUDED = buildExclusionSet();
+
+function randomFiller() {
+  let ch;
+  do { ch = COMMON_CHARS[Math.random() * COMMON_CHARS.length | 0]; }
+  while (EXCLUDED.has(ch));
+  return ch;
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.random() * (i + 1) | 0;
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildGrid() {
+  const chars = [];
+  for (const p of PHRASES) for (const ch of p.chinese) chars.push(ch);
+  shuffle(chars);
+  const grid = chars.slice(0, GRID_SIZE);
+  while (grid.length < GRID_SIZE) grid.push(randomFiller());
+  return shuffle(grid);
+}
+
+function shufflePhrases() {
+  levelPhrases = shuffle([...PHRASES]);
+}
+
+const gridEl = document.getElementById('grid');
+const answerRow = document.getElementById('answerRow');
+const statusMsg = document.getElementById('statusMsg');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const levelDisplay = document.getElementById('levelDisplay');
+const progressDisplay = document.getElementById('progressDisplay');
+
+const overlay = document.getElementById('overlay');
+const clueChinese = document.getElementById('clueChinese');
+const cluePinyin = document.getElementById('cluePinyin');
+const cluePinyinOnly = document.getElementById('cluePinyinOnly');
+const timerDisplay = document.getElementById('timerDisplay');
+const sublineText = document.getElementById('sublineText');
+
+const completeScreen = document.getElementById('completeScreen');
+const completeTitle = document.getElementById('completeTitle');
+const completeSub = document.getElementById('completeSub');
+const completeScore = document.getElementById('completeScore');
+const breakdown = document.getElementById('breakdown');
+const replayBtn = document.getElementById('replayBtn');
+const continueBtn = document.getElementById('continueBtn');
+
+let state = 'idle';
+let gridData = [];
+let cellElements = [];
+let currentLevel = 0;
+let currentPhrase = 0;
+let levelPhrases = [];
+let score = 0;
+let clickedIndices = [];
+let attempts = 0;
+let levelResults = [];
+let timerId = null;
+let timerVal = TIMER_SECONDS;
+
+function advance() {
+  if (state === 'feedback' || state === 'idle' || state === 'play') return;
+  clearInterval(timerId);
+  overlay.classList.remove('show');
+  setTimeout(startPlay, 350);
+}
+
+function startReveal() {
+  state = 'reveal';
+  const p = levelPhrases[currentPhrase];
+  const isL1 = currentLevel === 0;
+
+  clueChinese.textContent = isL1 ? p.chinese : '';
+  clueChinese.style.display = isL1 ? '' : 'none';
+  cluePinyin.textContent = isL1 ? p.pinyin : '';
+  cluePinyin.style.display = isL1 ? '' : 'none';
+  cluePinyinOnly.textContent = isL1 ? '' : p.pinyin;
+  cluePinyinOnly.style.display = isL1 ? 'none' : '';
+
+  timerVal = TIMER_SECONDS;
+  timerDisplay.textContent = timerVal;
+  sublineText.textContent = 'Get ready...';
+  overlay.classList.add('show');
+
+  clearInterval(timerId);
+  timerId = setInterval(() => {
+    timerVal--;
+    timerDisplay.textContent = Math.max(timerVal, 0);
+    if (timerVal <= 0) {
+      clearInterval(timerId);
+      overlay.classList.remove('show');
+      setTimeout(startPlay, 350);
+    }
+  }, 1000);
+}
+
+function startPlay() {
+  if (state === 'feedback') return;
+  state = 'play';
+  clickedIndices = [];
+  attempts = 0;
+  clearCellSelection();
+  const p = levelPhrases[currentPhrase];
+  document.getElementById('pinyinHint').textContent = p.pinyin;
+  renderAnswerSlots(p.chinese.length);
+  updateStatus('Find the characters in order', '');
+  enableActiveCells(true);
+}
+
+function renderAnswerSlots(n) {
+  answerRow.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const div = document.createElement('div');
+    div.className = 'slot';
+    answerRow.appendChild(div);
+  }
+}
+
+function fillNextSlot(char) {
+  const slots = answerRow.querySelectorAll('.slot');
+  for (const s of slots) {
+    if (!s.classList.contains('filled')) {
+      s.textContent = char;
+      s.classList.add('filled');
+      return s;
+    }
+  }
+}
+
+function clearSlots() {
+  answerRow.querySelectorAll('.slot').forEach(s => {
+    s.textContent = '';
+    s.className = 'slot';
+  });
+}
+
+function clearCellSelection() {
+  for (const el of cellElements) el.classList.remove('selected');
+}
+
+function updateStatus(msg, cls) {
+  statusMsg.textContent = msg;
+  statusMsg.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+function enableActiveCells(enabled) {
+  for (let i = 0; i < cellElements.length; i++) {
+    const el = cellElements[i];
+    if (gridData[i].used) continue;
+    el.classList.toggle('active', enabled);
+  }
+}
+
+function undoLast() {
+  if (state !== 'play' || clickedIndices.length === 0) return;
+  const idx = clickedIndices.pop();
+  const el = cellElements[idx];
+  el.classList.remove('selected');
+  const slots = answerRow.querySelectorAll('.slot');
+  for (let i = slots.length - 1; i >= 0; i--) {
+    if (slots[i].classList.contains('filled')) {
+      slots[i].textContent = '';
+      slots[i].className = 'slot';
+      break;
+    }
+  }
+  updateStatus('Find the characters in order', '');
+  enableActiveCells(true);
+}
+
+function handleCellClick(index) {
+  if (state !== 'play') return;
+  const cell = gridData[index];
+  if (cell.used) return;
+  const el = cellElements[index];
+  if (el.classList.contains('selected')) return;
+
+  const phraseLen = levelPhrases[currentPhrase].chinese.length;
+  if (clickedIndices.length >= phraseLen) return;
+
+  clickedIndices.push(index);
+  el.classList.add('selected');
+  fillNextSlot(cell.char);
+
+  if (clickedIndices.length === phraseLen) {
+    enableActiveCells(false);
+    state = 'checking';
+    setTimeout(checkAnswer, 500);
+  }
+}
+
+function checkAnswer() {
+  const p = levelPhrases[currentPhrase];
+  const expected = [...p.chinese];
+  const got = clickedIndices.map(i => gridData[i].char);
+  const correct = expected.every((c, i) => c === got[i]);
+
+  const slots = answerRow.querySelectorAll('.slot');
+  if (correct) {
+    attempts++;
+    const fullPts = p.chinese.length * 10;
+    const pts = attempts > 1 ? Math.round(fullPts / 2) : fullPts;
+    score += pts;
+    scoreDisplay.textContent = score;
+    slots.forEach(s => s.classList.add('correct'));
+    const label = attempts > 1 ? 'Correct (+' + pts + ' pts, half)' : 'Correct! +' + pts + ' pts';
+    updateStatus(label, 'correct-msg');
+    for (const i of clickedIndices) {
+      gridData[i].used = true;
+      cellElements[i].classList.remove('selected');
+      cellElements[i].classList.add('used-correct');
+    }
+    levelResults.push(true);
+    state = 'feedback';
+    setTimeout(nextPhrase, 2000);
+  } else {
+    slots.forEach(s => s.classList.add('wrong'));
+    attempts++;
+    if (attempts >= 2) {
+      updateStatus('Wrong! \u2714 ' + p.chinese, 'wrong-msg');
+      levelResults.push(false);
+      state = 'feedback';
+      setTimeout(nextPhrase, 2000);
+    } else {
+      updateStatus('Try again! Click the right characters...', 'wrong-msg');
+      state = 'play';
+      setTimeout(() => {
+        clearSlots();
+        clearCellSelection();
+        clickedIndices = [];
+        enableActiveCells(true);
+      }, 1000);
+    }
+  }
+}
+
+function nextPhrase() {
+  currentPhrase++;
+  if (currentPhrase >= PHRASE_COUNT) {
+    showLevelComplete();
+    return;
+  }
+  updateProgress();
+  clearSlots();
+  clearCellSelection();
+  startReveal();
+}
+
+function showLevelComplete() {
+  state = 'idle';
+  const isL1 = currentLevel === 0;
+  completeTitle.textContent = isL1 ? 'Level 1 Complete' : 'Game Complete!';
+  completeSub.textContent = isL1
+    ? 'Ready for Level 2? (pinyin only!)'
+    : 'You finished both levels!';
+  completeScore.textContent = score;
+
+  breakdown.innerHTML = '';
+  levelResults.forEach((ok, i) => {
+    const span = document.createElement('span');
+    span.className = ok ? 'ok' : 'no';
+    span.textContent = (i + 1) + '. ' + (ok ? '\u2713' : '\u2717');
+    breakdown.appendChild(span);
+  });
+
+  if (isL1) {
+    continueBtn.textContent = 'Start Level 2';
+    continueBtn.className = 'btn primary';
+    continueBtn.onclick = startLevel2;
+    replayBtn.style.display = '';
+    replayBtn.className = 'btn';
+    replayBtn.onclick = replayLevel1;
+  } else {
+    continueBtn.textContent = 'Play Again';
+    continueBtn.className = 'btn primary';
+    continueBtn.onclick = resetGame;
+    replayBtn.style.display = 'none';
+  }
+  completeScreen.classList.add('show');
+}
+
+function startLevel2() {
+  completeScreen.classList.remove('show');
+  currentLevel = 1;
+  currentPhrase = 0;
+  levelResults = [];
+  levelDisplay.textContent = 'Level 2';
+  shufflePhrases();
+  buildAndRenderGrid();
+  updateProgress();
+  setTimeout(() => startReveal(), 400);
+}
+
+function replayLevel1() {
+  completeScreen.classList.remove('show');
+  currentLevel = 0;
+  currentPhrase = 0;
+  score = 0;
+  levelResults = [];
+  scoreDisplay.textContent = '0';
+  levelDisplay.textContent = 'Level 1';
+  shufflePhrases();
+  buildAndRenderGrid();
+  updateProgress();
+  setTimeout(() => startReveal(), 400);
+}
+
+function resetGame() {
+  completeScreen.classList.remove('show');
+  currentLevel = 0;
+  currentPhrase = 0;
+  score = 0;
+  levelResults = [];
+  scoreDisplay.textContent = '0';
+  levelDisplay.textContent = 'Level 1';
+  shufflePhrases();
+  buildAndRenderGrid();
+  updateProgress();
+  setTimeout(() => startReveal(), 400);
+}
+
+function updateProgress() {
+  progressDisplay.textContent = (currentPhrase + 1) + ' / 10';
+}
+
+function buildAndRenderGrid() {
+  const raw = buildGrid();
+  gridData = raw.map((ch, i) => ({ char: ch, used: false, index: i }));
+  gridEl.innerHTML = '';
+  cellElements = [];
+  for (let i = 0; i < GRID_SIZE; i++) {
+    const div = document.createElement('div');
+    div.className = 'cell';
+    div.textContent = gridData[i].char;
+    div.dataset.index = i;
+    div.addEventListener('click', () => handleCellClick(i));
+    gridEl.appendChild(div);
+    cellElements.push(div);
+  }
+}
+
+answerRow.addEventListener('click', e => {
+  const slot = e.target.closest('.slot');
+  if (slot && slot.classList.contains('filled')) undoLast();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (state === 'reveal') advance();
+    else if (completeScreen.classList.contains('show')) continueBtn.click();
+  }
+  if (e.code === 'Backspace' || e.code === 'Delete') {
+    e.preventDefault();
+    undoLast();
+  }
+});
+
+overlay.addEventListener('click', advance);
+
+function init() {
+  shufflePhrases();
+  buildAndRenderGrid();
+  updateProgress();
+  startReveal();
+}
+
+init();
+</script>
+</body>
+</html>
