@@ -77,13 +77,22 @@ body {
   opacity: 0.7;
   cursor: default;
 }
-.pinyin-hint {
+.hint-area {
+  margin: 10px 0 4px;
   text-align: center;
+}
+.hint-area .pinyin-hint {
   font-size: 20px;
   color: #666;
   font-weight: 700;
-  margin: 10px 0 4px;
   letter-spacing: 1px;
+}
+.hint-area .meaning-hint {
+  font-size: 15px;
+  color: #999;
+  font-weight: 400;
+  margin-top: 2px;
+  line-height: 1.3;
 }
 .answer-row {
   display: flex;
@@ -168,7 +177,17 @@ body {
   font-size: clamp(18px, 4vw, 26px);
   color: rgba(255,255,255,0.7);
   font-weight: 400;
+  margin-bottom: 4px;
+}
+.overlay .clue-meaning {
+  font-size: clamp(13px, 2.5vw, 17px);
+  color: rgba(255,255,255,0.55);
+  font-weight: 400;
   margin-bottom: 10px;
+  padding: 0 20px;
+  text-align: center;
+  line-height: 1.3;
+  max-width: 80vw;
 }
 .overlay .clue-pinyin-only {
   font-size: clamp(28px, 6vw, 40px);
@@ -188,7 +207,7 @@ body {
   color: rgba(255,255,255,0.4);
   margin-top: 6px;
 }
-.complete-screen {
+.menu-screen, .complete-screen {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.82);
@@ -201,7 +220,50 @@ body {
   pointer-events: none;
   transition: opacity 0.4s ease;
 }
-.complete-screen.show { opacity: 1; pointer-events: auto; }
+.menu-screen.show, .complete-screen.show { opacity: 1; pointer-events: auto; }
+.menu-screen h1 {
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+}
+.menu-screen .sub {
+  font-size: 18px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 32px;
+}
+.menu-screen .btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+.menu-screen .btn {
+  padding: 14px 48px;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: inherit;
+  border: 2px solid #ffd54f;
+  border-radius: 12px;
+  background: transparent;
+  color: #ffd54f;
+  cursor: pointer;
+  min-width: 220px;
+  transition: transform 0.15s, background 0.2s;
+}
+.menu-screen .btn:hover { background: rgba(255,213,79,0.1); }
+.menu-screen .btn:active { transform: scale(0.95); }
+.menu-screen .btn.primary {
+  background: #ffd54f;
+  color: #333;
+}
+.menu-screen .btn.primary:hover { background: #ffca28; }
+.menu-screen .btn-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  margin-top: 2px;
+}
 .complete-screen h2 {
   font-size: 32px;
   color: #fff;
@@ -263,6 +325,9 @@ body {
   .cell { font-size: 18px; border-radius: 4px; }
   .slot { width: 38px; height: 38px; font-size: 18px; }
   .top-bar { font-size: 13px; padding: 4px 2px 8px; }
+  .hint-area .meaning-hint { font-size: 13px; }
+  .menu-screen h1 { font-size: 28px; }
+  .menu-screen .btn { font-size: 17px; padding: 12px 36px; min-width: 180px; }
 }
 </style>
 </head>
@@ -279,7 +344,10 @@ body {
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="pinyin-hint" id="pinyinHint"></div>
+  <div class="hint-area">
+    <div class="pinyin-hint" id="pinyinHint"></div>
+    <div class="meaning-hint" id="meaningHint"></div>
+  </div>
 
   <div class="answer-row" id="answerRow"></div>
 
@@ -289,9 +357,25 @@ body {
 <div class="overlay" id="overlay">
   <div class="clue-chinese" id="clueChinese"></div>
   <div class="clue-pinyin" id="cluePinyin"></div>
+  <div class="clue-meaning" id="clueMeaning"></div>
   <div class="clue-pinyin-only" id="cluePinyinOnly"></div>
   <div class="timer" id="timerDisplay">8</div>
   <div class="subline" id="sublineText">Get ready...</div>
+</div>
+
+<div class="menu-screen" id="menuScreen">
+  <h1>&#x5BFB;&#x5B57;&#x6E38;&#x620F;</h1>
+  <div class="sub">Term 1.7 &mdash; &#x8857;&#x821E;</div>
+  <div class="btn-row">
+    <div>
+      <button class="btn primary" id="menuLevel1">Level 1</button>
+      <div class="btn-desc">See Chinese + pinyin + meaning</div>
+    </div>
+    <div>
+      <button class="btn" id="menuLevel2">Level 2</button>
+      <div class="btn-desc">See pinyin + meaning only</div>
+    </div>
+  </div>
 </div>
 
 <div class="complete-screen" id="completeScreen">
@@ -307,15 +391,15 @@ body {
 
 <script>
 const PHRASES = [
-  { chinese: '精彩演绎', pinyin: '(jīng cǎi yǎn yì)' },
-  { chinese: '晴天霹雳', pinyin: '(qíng tiān pī lì)' },
-  { chinese: '配合默契', pinyin: '(pèi hé mò qì)' },
-  { chinese: '顾名思义', pinyin: '(gù míng sī yì)' },
-  { chinese: '青春靓丽', pinyin: '(qīng chūn liàng lì)' },
-  { chinese: '迷恋游戏', pinyin: '(mí liàn yóu xì)' },
-  { chinese: '容光焕发', pinyin: '(róng guāng huàn fā)' },
-  { chinese: '雨后春笋', pinyin: '(yǔ hòu chūn sǔn)' },
-  { chinese: '绚丽多彩', pinyin: '(xuàn lì duō cǎi)' },
+  { chinese: '精彩演绎', pinyin: '(jīng cǎi yǎn yì)', meaning: 'brilliant performance or interpretation' },
+  { chinese: '晴天霹雳', pinyin: '(qíng tiān pī lì)', meaning: 'a bolt from the blue; sudden, shocking event' },
+  { chinese: '配合默契', pinyin: '(pèi hé mò qì)', meaning: 'to work together in perfect harmony; well-coordinated' },
+  { chinese: '顾名思义', pinyin: '(gù míng sī yì)', meaning: 'as the name implies; as the term suggests' },
+  { chinese: '青春靓丽', pinyin: '(qīng chūn liàng lì)', meaning: 'young and beautiful; fresh and attractive' },
+  { chinese: '迷恋游戏', pinyin: '(mí liàn yóu xì)', meaning: 'addicted to gaming; obsessed with games' },
+  { chinese: '容光焕发', pinyin: '(róng guāng huàn fā)', meaning: 'glowing with health and vitality; radiant' },
+  { chinese: '雨后春笋', pinyin: '(yǔ hòu chūn sǔn)', meaning: 'to spring up like bamboo shoots after rain; rapid proliferation' },
+  { chinese: '绚丽多彩', pinyin: '(xuàn lì duō cǎi)', meaning: 'gorgeous and colourful; resplendent' },
 ];
 
 const TIMER_SECONDS = 8;
@@ -370,10 +454,12 @@ const progressDisplay = document.getElementById('progressDisplay');
 const overlay = document.getElementById('overlay');
 const clueChinese = document.getElementById('clueChinese');
 const cluePinyin = document.getElementById('cluePinyin');
+const clueMeaning = document.getElementById('clueMeaning');
 const cluePinyinOnly = document.getElementById('cluePinyinOnly');
 const timerDisplay = document.getElementById('timerDisplay');
 const sublineText = document.getElementById('sublineText');
 
+const menuScreen = document.getElementById('menuScreen');
 const completeScreen = document.getElementById('completeScreen');
 const completeTitle = document.getElementById('completeTitle');
 const completeSub = document.getElementById('completeSub');
@@ -411,6 +497,8 @@ function startReveal() {
   clueChinese.style.display = isL1 ? '' : 'none';
   cluePinyin.textContent = isL1 ? p.pinyin : '';
   cluePinyin.style.display = isL1 ? '' : 'none';
+  clueMeaning.textContent = p.meaning;
+  clueMeaning.style.display = '';
   cluePinyinOnly.textContent = isL1 ? '' : p.pinyin;
   cluePinyinOnly.style.display = isL1 ? 'none' : '';
 
@@ -439,6 +527,7 @@ function startPlay() {
   clearCellSelection();
   const p = levelPhrases[currentPhrase];
   document.getElementById('pinyinHint').textContent = p.pinyin;
+  document.getElementById('meaningHint').textContent = p.meaning;
   renderAnswerSlots(p.chinese.length);
   updateStatus('Find the characters in order', '');
   enableActiveCells(true);
@@ -608,52 +697,40 @@ function showLevelComplete() {
     replayBtn.className = 'btn';
     replayBtn.onclick = replayLevel1;
   } else {
-    continueBtn.textContent = 'Play Again';
+    continueBtn.textContent = 'Back to Menu';
     continueBtn.className = 'btn primary';
-    continueBtn.onclick = resetGame;
+    continueBtn.onclick = showMenu;
     replayBtn.style.display = 'none';
   }
   completeScreen.classList.add('show');
 }
 
-function startLevel2() {
+function startLevel(level) {
+  menuScreen.classList.remove('show');
   completeScreen.classList.remove('show');
-  currentLevel = 1;
+  currentLevel = level;
   currentPhrase = 0;
+  score = 0;
   levelResults = [];
-  levelDisplay.textContent = 'Level 2';
+  scoreDisplay.textContent = '0';
+  levelDisplay.textContent = level === 0 ? 'Level 1' : 'Level 2';
   shufflePhrases();
   buildAndRenderGrid();
   updateProgress();
   setTimeout(() => startReveal(), 400);
+}
+
+function startLevel2() {
+  startLevel(1);
 }
 
 function replayLevel1() {
-  completeScreen.classList.remove('show');
-  currentLevel = 0;
-  currentPhrase = 0;
-  score = 0;
-  levelResults = [];
-  scoreDisplay.textContent = '0';
-  levelDisplay.textContent = 'Level 1';
-  shufflePhrases();
-  buildAndRenderGrid();
-  updateProgress();
-  setTimeout(() => startReveal(), 400);
+  startLevel(0);
 }
 
-function resetGame() {
+function showMenu() {
   completeScreen.classList.remove('show');
-  currentLevel = 0;
-  currentPhrase = 0;
-  score = 0;
-  levelResults = [];
-  scoreDisplay.textContent = '0';
-  levelDisplay.textContent = 'Level 1';
-  shufflePhrases();
-  buildAndRenderGrid();
-  updateProgress();
-  setTimeout(() => startReveal(), 400);
+  menuScreen.classList.add('show');
 }
 
 function updateProgress() {
@@ -686,6 +763,7 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     if (state === 'reveal') advance();
     else if (completeScreen.classList.contains('show')) continueBtn.click();
+    else if (menuScreen.classList.contains('show')) document.getElementById('menuLevel1').click();
   }
   if (e.code === 'Backspace' || e.code === 'Delete') {
     e.preventDefault();
@@ -695,11 +773,11 @@ document.addEventListener('keydown', e => {
 
 overlay.addEventListener('click', advance);
 
+document.getElementById('menuLevel1').addEventListener('click', () => startLevel(0));
+document.getElementById('menuLevel2').addEventListener('click', () => startLevel(1));
+
 function init() {
-  shufflePhrases();
-  buildAndRenderGrid();
-  updateProgress();
-  startReveal();
+  menuScreen.classList.add('show');
 }
 
 init();
