@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>读词语游戏 — 全民防卫</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  background: #f0ebe3;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  overflow: hidden;
+}
+#app {
+  width: 100%;
+  max-width: 520px;
+  padding: 12px;
+  position: relative;
+}
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px 12px;
+  font-size: 15px;
+  color: #555;
+  font-weight: 700;
+}
+.top-bar .score { color: #2a7a3e; font-size: 18px; }
+.top-bar .progress { color: #888; }
+
+.target-card {
+  background: linear-gradient(135deg, #fb8c00, #f57c00);
+  border-radius: 16px;
+  padding: 18px 16px 12px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(245,124,0,0.28);
+  margin-bottom: 14px;
+}
+.target-card .target-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.target-card .target-phrase {
+  font-size: clamp(40px, 11vw, 60px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.25;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.18);
+}
+.target-card .target-pinyin {
+  font-size: 18px;
+  color: #fff3e0;
+  font-weight: 700;
+  letter-spacing: 2px;
+  min-height: 26px;
+  margin-top: 2px;
+}
+
+.mic-area {
+  text-align: center;
+  margin: 6px 0 4px;
+}
+.mic-btn {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #fb8c00, #ef6c00);
+  color: #fff;
+  font-size: 34px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(239,108,0,0.4);
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.mic-btn:hover { transform: scale(1.04); }
+.mic-btn:active { transform: scale(0.94); }
+.mic-btn.listening {
+  background: #2e7d32;
+  box-shadow: 0 0 0 0 rgba(46,125,50,0.5);
+  animation: pulse 1.6s infinite;
+}
+.mic-btn.secondary {
+  width: auto;
+  height: auto;
+  border-radius: 40px;
+  padding: 12px 30px;
+  font-size: 17px;
+  font-weight: 700;
+  background: transparent;
+  border: 2px solid #f57c00;
+  color: #f57c00;
+  box-shadow: none;
+}
+.mic-btn.secondary:hover { background: rgba(245,124,0,0.08); }
+.mic-btn.secondary:active { transform: scale(0.95); }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(46,125,50,0.5); }
+  70% { box-shadow: 0 0 0 26px rgba(46,125,50,0); }
+  100% { box-shadow: 0 0 0 0 rgba(46,125,50,0); }
+}
+
+.voice-word {
+  min-height: 58px;
+  text-align: center;
+  font-size: clamp(20px, 5.4vw, 26px);
+  font-weight: 700;
+  color: #666;
+  padding: 8px 10px 0;
+  line-height: 1.5;
+}
+.voice-word .heard {
+  color: #b26a00;
+  background: #fff3e0;
+  border-radius: 8px;
+  padding: 2px 10px;
+  display: inline-block;
+  max-width: 100%;
+}
+.voice-word .ready {
+  color: #999;
+  font-size: 14px;
+  font-weight: 400;
+}
+.voice-word .correct-heard { color: #2e7d32; background: #c8e6c9; }
+.voice-word .wrong-heard { color: #c62828; background: #ffcdd2; }
+
+.btn-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 10px;
+  min-height: 52px;
+}
+.tap-btn {
+  padding: 12px 28px;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  border: 2px solid #f57c00;
+  border-radius: 40px;
+  background: transparent;
+  color: #f57c00;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.2s;
+}
+.tap-btn:hover { background: rgba(245,124,0,0.08); }
+.tap-btn:active { transform: scale(0.95); }
+.tap-btn.primary { background: #f57c00; color: #fff; border-color: #f57c00; }
+.tap-btn.primary:hover { background: #ef6c00; }
+
+.status {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 30px;
+  line-height: 30px;
+  color: #555;
+  margin-top: 10px;
+}
+.status.correct-msg { color: #2e7d32; }
+.status.wrong-msg { color: #c62828; }
+
+.screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.screen.show { opacity: 1; pointer-events: auto; }
+.screen h1 {
+  font-size: clamp(40px, 10vw, 56px);
+  font-weight: 900;
+  color: #ffd54f;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  margin-bottom: 6px;
+}
+.screen .sub {
+  font-size: 17px;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 14px;
+  text-align: center;
+  padding: 0 24px;
+  line-height: 1.5;
+}
+.screen .rule {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 24px;
+  text-align: center;
+  padding: 0 28px;
+  line-height: 1.7;
+}
+.screen .btn {
+  padding: 14px 52px;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: inherit;
+  border: 2px solid #ffd54f;
+  border-radius: 12px;
+  background: transparent;
+  color: #ffd54f;
+  cursor: pointer;
+  min-width: 220px;
+  transition: transform 0.15s, background 0.2s;
+  display: block;
+  margin: 0 auto 14px;
+}
+.screen .btn:hover { background: rgba(255,213,79,0.1); }
+.screen .btn:active { transform: scale(0.95); }
+.screen .btn.primary { background: #ffd54f; color: #333; }
+.screen .btn.primary:hover { background: #ffca28; }
+.toggle {
+  color: rgba(255,255,255,0.8);
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 26px;
+  cursor: pointer;
+}
+.toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: #ffd54f;
+  cursor: pointer;
+}
+.notice {
+  display: none;
+  color: #ffca8a;
+  background: rgba(245,124,0,0.15);
+  border: 1px solid rgba(255,213,79,0.5);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 320px;
+  text-align: center;
+  margin-bottom: 18px;
+}
+.notice.show { display: block; }
+
+.end-score {
+  font-size: clamp(48px, 13vw, 72px);
+  font-weight: 900;
+  color: #fff;
+  margin: 10px 0 6px;
+}
+.end-score em {
+  font-style: normal;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffd54f;
+  display: block;
+  margin-bottom: 2px;
+  letter-spacing: 3px;
+}
+.breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  justify-content: center;
+  max-width: 360px;
+  margin-bottom: 30px;
+}
+.breakdown span {
+  font-size: 16px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 700;
+}
+.breakdown .ok { color: #81c784; }
+.breakdown .no { color: #e57373; }
+
+@media (max-width: 420px) {
+  #app { padding: 6px; }
+  .mic-btn { width: 112px; height: 112px; font-size: 28px; }
+  .top-bar { font-size: 13px; padding: 4px 2px 10px; }
+  .screen .btn { font-size: 17px; padding: 12px 40px; min-width: 190px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="top-bar">
+    <span class="score">&#9733; <span id="scoreDisplay">0</span></span>
+    <span class="progress" id="progressDisplay">1 / 15</span>
+  </div>
+
+  <div class="target-card">
+    <div class="target-label">试试读出这个词语</div>
+    <div class="target-phrase" id="targetPhrase"></div>
+    <div class="target-pinyin" id="targetPinyin"></div>
+  </div>
+
+  <div class="mic-area">
+    <button class="mic-btn" id="micBtn">读</button>
+  </div>
+
+  <div class="voice-word" id="voiceWord"><span class="ready">按住「读」后大声说出屏幕上的词语</span></div>
+
+  <div class="btn-row" id="actionRow"></div>
+
+  <div class="status" id="statusMsg">朗读这个词语</div>
+</div>
+
+<div class="screen" id="startScreen">
+  <h1>&#x8BFB;&#x8BCD;&#x8BED;</h1>
+  <div class="sub">全民防卫 · 朗读挑战</div>
+  <div class="rule">大声读出屏幕上的词语，看看读得准不准。
+  <br>第一个就答对 +10 分。</div>
+  <div class="notice" id="notice"></div>
+  <button class="btn primary" id="startBtn">&#x5F00;&#x59CB;&#x559C;&#x8BFB;</button>
+  <button class="btn" id="selftestBtn">&#x81EA;&#x6D4B;&#x6A21;&#x5F0F;</button>
+  <label class="toggle"><input type="checkbox" id="pinyinToggle" checked>显示拼音</label>
+</div>
+
+<div class="screen" id="endScreen">
+  <h1>&#x5B8C;&#x6210;&#xFF01;</h1>
+  <div class="sub" id="endSub">做得很棒！</div>
+  <div class="end-score"><em>总得分</em><span id="finalScore">0</span></div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="btn-row">
+    <button class="btn" id="menuBtn">&#x8FD4;&#x56DE;&#x5F00;&#x59CB;</button>
+    <button class="btn primary" id="replayBtn">&#x518D;&#x73A9;&#x4E00;&#x6B21;</button>
+  </div>
+</div>
+
+<script>
+const DATA = [
+  { phrase: '反恐', pinyin: 'fǎn kǒng' },
+  { phrase: '闭路电视', pinyin: 'bì lù diàn shì' },
+  { phrase: '打击', pinyin: 'dǎ jī' },
+  { phrase: '演习', pinyin: 'yǎn xí' },
+  { phrase: '急救措施', pinyin: 'jí jiù cuò shī' },
+  { phrase: '极端思想', pinyin: 'jí duān sī xiǎng' },
+  { phrase: '巡逻', pinyin: 'xún luó' },
+  { phrase: '激进', pinyin: 'jī jìn' },
+  { phrase: '全民防卫计划', pinyin: 'quán mín fáng wèi jì huà' },
+  { phrase: '武装部队', pinyin: 'wǔ zhuāng bù duì' },
+  { phrase: '恐怖袭击', pinyin: 'kǒng bù xí jī' },
+  { phrase: '恐怖分子', pinyin: 'kǒng bù fèn zǐ' },
+  { phrase: '全民防卫', pinyin: 'quán mín fáng wèi' },
+  { phrase: '武器', pinyin: 'wǔ qì' },
+  { phrase: '居安思危', pinyin: 'jū ān sī wēi' }
+];
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const supported = !!SR;
+
+const targetPhrase = document.getElementById('targetPhrase');
+const targetPinyin = document.getElementById('targetPinyin');
+const micBtn = document.getElementById('micBtn');
+const voiceWord = document.getElementById('voiceWord');
+const actionRow = document.getElementById('actionRow');
+const statusMsg = document.getElementById('statusMsg');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const progressDisplay = document.getElementById('progressDisplay');
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+const finalScore = document.getElementById('finalScore');
+const endSub = document.getElementById('endSub');
+const breakdown = document.getElementById('breakdown');
+const notice = document.getElementById('notice');
+const pinyinToggle = document.getElementById('pinyinToggle');
+
+let rounds = [];
+let roundIndex = 0;
+let score = 0;
+let results = [];
+let mode = 'voice';
+let state = 'idle';
+let rec = null;
+let recognized = '';
+let listening = false;
+let wrongThisRound = false;
+let attempts = 0;
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.random() * (i + 1) | 0;
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function updateStatus(msg, cls) {
+  statusMsg.textContent = msg;
+  statusMsg.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+function normalize(s) {
+  return s.replace(/[\s\u3000，。！？、,.!?；;：:（）()“”"'-—…、·]/g, '')
+          .replace(/[的得地]/g, '');
+}
+
+function setPinyin() {
+  targetPinyin.textContent = pinyinToggle.checked ? rounds[roundIndex].pinyin : '';
+}
+
+function backToStart() {
+  endScreen.classList.remove('show');
+  startScreen.classList.add('show');
+}
+
+function startGame(m) {
+  mode = m;
+  startScreen.classList.remove('show');
+  endScreen.classList.remove('show');
+  rounds = shuffle([...DATA]);
+  roundIndex = 0;
+  score = 0;
+  results = [];
+  scoreDisplay.textContent = '0';
+  loadRound();
+}
+
+function loadRound() {
+  const r = rounds[roundIndex];
+  state = 'play';
+  wrongThisRound = false;
+  attempts = 0;
+  targetPhrase.textContent = r.phrase;
+  setPinyin();
+  voiceWord.innerHTML = '<span class="ready">' + (mode === 'voice'
+    ? '点「读」后大声说出屏幕上的词语'
+    : '自己读一遍，然后选择读得对不对') + '</span>';
+  actionRow.innerHTML = '';
+  micBtn.className = 'mic-btn';
+  micBtn.textContent = '读';
+  updateStatus('朗读这个词语', '');
+  updateProgress();
+
+  if (mode === 'self') buildSelfActions();
+}
+
+function buildSelfActions() {
+  micBtn.style.visibility = 'hidden';
+  actionRow.innerHTML = '';
+  const ok = document.createElement('button');
+  ok.className = 'tap-btn primary';
+  ok.textContent = '读对了 +10';
+  ok.addEventListener('click', () => {
+    if (state !== 'play') return;
+    state = 'feedback';
+    score += 10;
+    scoreDisplay.textContent = score;
+    updateStatus('读对了！+' + 10 + ' 分', 'correct-msg');
+    setTimeout(nextRound, 1100);
+  });
+  const no = document.createElement('button');
+  no.className = 'tap-btn';
+  no.textContent = '读错了';
+  no.addEventListener('click', () => {
+    if (state !== 'play') return;
+    state = 'feedback';
+    wrongThisRound = true;
+    updateStatus('没关系，多练几遍', 'wrong-msg');
+    setTimeout(nextRound, 1100);
+  });
+  actionRow.appendChild(ok);
+  actionRow.appendChild(no);
+}
+
+function startListen() {
+  if (!supported) return;
+  if (state !== 'play' || listening) return;
+  listening = true;
+  recognized = '';
+  micBtn.classList.add('listening');
+  micBtn.textContent = '…';
+  voiceWord.innerHTML = '<span class="ready">正在听……</span>';
+  updateStatus('请大声朗读', '');
+
+  rec = new SR();
+  rec.lang = 'zh-CN';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+
+  rec.onresult = e => {
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    if (final) recognized = final;
+    voiceWord.innerHTML = '<span class="heard">' + escapeHtml(final || interim) + '</span>';
+    if (e.results[0].isFinal && final) {
+      stopListen();
+      assess(final);
+    }
+  };
+
+  rec.onerror = e => {
+    listening = false;
+    micBtn.className = 'mic-btn';
+    micBtn.textContent = '读';
+    let msg = '出错了，请再试一次';
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      msg = '无法使用麦克风，请允许浏览器的麦克风权限，或改用自测模式';
+    } else if (e.error === 'no-speech') {
+      msg = '没有听到声音，再试一次';
+    } else if (e.error === 'network') {
+      msg = '网络连接失败，请检查网络后重试';
+    }
+    voiceWord.innerHTML = '<span class="heard wrong-heard">' + msg + '</span>';
+    updateStatus('', '');
+  };
+
+  rec.onend = () => {
+    if (!listening) return;
+    listening = false;
+    micBtn.className = 'mic-btn';
+    micBtn.textContent = '读';
+    if (state !== 'play') return;
+    if (recognized) {
+      assess(recognized);
+    } else {
+      voiceWord.innerHTML = '<span class="heard wrong-heard">没听清，请大声再读一次</span>';
+    }
+  };
+
+  rec.start();
+}
+
+function stopListen() {
+  if (rec) { try { rec.stop(); } catch (e) {} }
+  listening = false;
+  micBtn.className = 'mic-btn';
+  micBtn.textContent = '读';
+}
+
+function assess(final) {
+  if (state !== 'play') return;
+  const expected = rounds[roundIndex].phrase;
+  const nF = normalize(final);
+  const nE = normalize(expected);
+  const correct = nF === nE || nF.includes(nE);
+
+  attempts++;
+  if (correct) {
+    state = 'feedback';
+    micBtn.style.visibility = 'hidden';
+    const pts = attempts === 1 ? 10 : 5;
+    score += pts;
+    scoreDisplay.textContent = score;
+    voiceWord.innerHTML = '<span class="heard correct-heard">我听到：' + escapeHtml(final) + '</span>';
+    updateStatus(attempts === 1 ? '读得真准！+' + pts + ' 分' : '这次对了！+' + pts + ' 分', 'correct-msg');
+    addRetryBar(true);
+    setTimeout(nextRound, 1600);
+  } else {
+    wrongThisRound = true;
+    voiceWord.innerHTML = '<span class="heard wrong-heard">我听到：' + escapeHtml(final) + '</span>';
+    updateStatus('再试一次', 'wrong-msg');
+    addRetryBar(false);
+  }
+}
+
+function addRetryBar(correct) {
+  actionRow.innerHTML = '';
+  if (correct) return;
+  const retry = document.createElement('button');
+  retry.className = 'tap-btn';
+  retry.textContent = '再读一次';
+  retry.addEventListener('click', () => {
+    if (state !== 'play') return;
+    micBtn.style.visibility = 'visible';
+    actionRow.innerHTML = '';
+    startListen();
+  });
+  const skip = document.createElement('button');
+  skip.className = 'tap-btn';
+  skip.textContent = '下一题';
+  skip.addEventListener('click', () => {
+    if (state !== 'play') return;
+    state = 'feedback';
+    nextRound();
+  });
+  actionRow.appendChild(retry);
+  actionRow.appendChild(skip);
+}
+
+function nextRound() {
+  results.push({ phrase: rounds[roundIndex].phrase, ok: !wrongThisRound });
+  micBtn.style.visibility = 'visible';
+  roundIndex++;
+  if (roundIndex >= rounds.length) {
+    showEnd();
+    return;
+  }
+  loadRound();
+}
+
+function updateProgress() {
+  progressDisplay.textContent = (roundIndex + 1) + ' / ' + rounds.length;
+}
+
+function showEnd() {
+  state = 'idle';
+  stopListen();
+  const okCount = results.filter(r => r.ok).length;
+  endSub.textContent = okCount === results.length
+    ? '全部读对，太厉害了！'
+    : '做得很棒，继续加油！';
+  finalScore.textContent = score;
+  breakdown.innerHTML = '';
+  results.forEach(r => {
+    const span = document.createElement('span');
+    span.className = r.ok ? 'ok' : 'no';
+    span.textContent = r.phrase + ' ' + (r.ok ? '\u2713' : '\u2717');
+    breakdown.appendChild(span);
+  });
+  endScreen.classList.add('show');
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+micBtn.addEventListener('click', () => {
+  if (mode === 'voice' && state === 'play') startListen();
+});
+
+document.getElementById('startBtn').addEventListener('click', () => startGame('voice'));
+document.getElementById('selftestBtn').addEventListener('click', () => startGame('self'));
+document.getElementById('replayBtn').addEventListener('click', () => startGame(mode));
+document.getElementById('menuBtn').addEventListener('click', backToStart);
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (endScreen.classList.contains('show')) document.getElementById('replayBtn').click();
+    else if (startScreen.classList.contains('show') && supported) document.getElementById('startBtn').click();
+  }
+});
+
+if (!supported) {
+  notice.textContent = '这个浏览器不支持语音识别。请用电脑或安卓手机的 Chrome / Edge 打开，才能使用朗读模式。现在请使用下方的自测模式。';
+  notice.classList.add('show');
+  document.getElementById('startBtn').style.display = 'none';
+}
+
+startScreen.classList.add('show');
+</script>
+</body>
+</html>
