@@ -118,7 +118,7 @@ body {
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   aspect-ratio: 1;
 }
@@ -415,7 +415,7 @@ function loadRound() {
   foundArea.innerHTML = '';
   updateStatus('找出正确的搭配', '');
 
-  const distractors = shuffle(buildDistractorPool(d)).slice(0, 15);
+  const distractors = shuffle(buildDistractorPool(d)).slice(0, 8);
   const chars = shuffle([d.answer, ...distractors]);
 
   gridEl.innerHTML = '';
