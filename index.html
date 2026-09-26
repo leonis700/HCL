@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>汉语词语游戏 · HCL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  background: #f0ebe3;
+  color: #3d352c;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px 40px;
+}
+#app { width: 100%; max-width: 520px; }
+
+.page-head { text-align: center; margin-bottom: 22px; }
+.page-head h1 {
+  font-size: clamp(26px, 7vw, 34px);
+  font-weight: 900;
+  color: #ef6c00;
+  letter-spacing: 1px;
+}
+.page-head p { margin-top: 6px; font-size: 14px; color: #8a7f72; }
+
+.cards { display: flex; flex-direction: column; gap: 14px; }
+
+.card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  border-left: 8px solid #fb8c00;
+  box-shadow: 0 4px 14px rgba(120, 100, 75, 0.14);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(120, 100, 75, 0.2); }
+.card:active { transform: translateY(0); }
+
+.card .zh { font-size: 21px; font-weight: 900; color: #2f2820; }
+.card .en { margin-top: 3px; font-size: 13px; font-weight: 700; color: #a2968a; letter-spacing: .3px; }
+.card .meta { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #fdeee0;
+  color: #d2691e;
+}
+.tag.mic { background: #e3f2e6; color: #2a7a3e; }
+
+.note {
+  margin-top: 20px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #6f6558;
+  box-shadow: 0 2px 8px rgba(120, 100, 75, 0.1);
+}
+.note b { color: #3d352c; }
+.note ul { margin: 6px 0 0 18px; }
+
+.foot { margin-top: 18px; text-align: center; font-size: 12px; color: #a2968a; }
+.foot a { color: #ef6c00; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="page-head">
+    <h1>汉语词语游戏</h1>
+    <p>点击卡片开始 · Tap a card to play</p>
+  </div>
+
+  <div class="cards">
+
+    <a class="card" href="读词语游戏_全民防卫.html">
+      <div class="zh">读词语游戏 — 全民防卫</div>
+      <div class="en">Read the Words — Civil Defence</div>
+      <div class="meta">
+        <span class="tag mic">需要麦克风</span>
+        <span class="tag">朗读词语</span>
+      </div>
+    </a>
+
+    <a class="card" href="寻字游戏_Term_1_7.html">
+      <div class="zh">寻字游戏 — Term 1.7 街舞</div>
+      <div class="en">Word Hunt — Term 1.7 Street Dance</div>
+      <div class="meta">
+        <span class="tag">找词</span>
+      </div>
+    </a>
+
+    <a class="card" href="chinese_char_finder.html">
+      <div class="zh">汉字寻宝 — 找字游戏</div>
+      <div class="en">Character Treasure Hunt</div>
+      <div class="meta">
+        <span class="tag">找字</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="note">
+    <b>使用说明 · How to play</b>
+    <ul>
+      <li>“读词语游戏”会使用麦克风，请点击允许 microphone access。</li>
+      <li>语音识别需要 <b>Chrome</b> 或 <b>Edge</b> 浏览器（Firefox / Safari 不支持）。</li>
+      <li>请佩戴耳机，并保持安静的环境。</li>
+    </ul>
+  </div>
+
+  <div class="foot">高华 · 汪老师 — Sec 3</div>
+
+</div>
+</body>
+</html>
