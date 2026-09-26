@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>词语挑战</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  background: #f0ebe3;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  overflow: hidden;
+}
+#app {
+  width: 100%;
+  max-width: 520px;
+  padding: 12px;
+  position: relative;
+}
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px 12px;
+  font-size: 15px;
+  color: #555;
+  font-weight: 700;
+}
+.top-bar .score { color: #2a7a3e; font-size: 18px; }
+.top-bar .progress { color: #888; }
+
+.target-card {
+  background: linear-gradient(135deg, #fb8c00, #f57c00);
+  border-radius: 12px;
+  padding: 10px 16px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(245,124,0,0.28);
+  margin-bottom: 10px;
+}
+.target-card .target-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+.target-card .target-word {
+  font-size: clamp(40px, 11vw, 60px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.1;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.18);
+}
+.target-card .target-pinyin {
+  font-size: 16px;
+  color: #fff3e0;
+  font-weight: 700;
+  letter-spacing: 2px;
+  min-height: 22px;
+}
+.target-card .target-sentence {
+  font-size: clamp(17px, 4.6vw, 21px);
+  color: #fff;
+  font-weight: 700;
+  line-height: 1.7;
+  padding: 2px 2px 4px;
+}
+.target-card .blank-slot {
+  display: inline-block;
+  min-width: 3.2em;
+  border-bottom: 3px solid #fff;
+  margin: 0 2px;
+  vertical-align: bottom;
+}
+
+.found-area {
+  min-height: 34px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 0 0 10px;
+}
+.found-chip {
+  background: #c8e6c9;
+  color: #2e7d32;
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  animation: chipPop 0.25s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  max-width: 100%;
+}
+@keyframes chipPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.grid-wrap {
+  background: #e6dfd5;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  aspect-ratio: 1;
+}
+.cell {
+  background: #fff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  color: #222;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, opacity 0.25s;
+  aspect-ratio: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  padding: 8px;
+}
+.cell.word-opt {
+  font-size: clamp(30px, 8vw, 42px);
+}
+.cell.meaning-opt {
+  font-size: clamp(15px, 4vw, 18px);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.cell:hover { background: #fde8c8; }
+.cell:active { transform: scale(0.95); }
+.cell.correct {
+  background: #66bb6a !important;
+  color: #fff !important;
+  cursor: default;
+  box-shadow: 0 2px 8px rgba(102,187,106,0.5);
+  animation: popRight 0.3s ease;
+}
+.cell.wrong {
+  background: #ef5350 !important;
+  color: #fff !important;
+  animation: shake 0.4s ease;
+}
+@keyframes popRight {
+  0% { transform: scale(0.6); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+.status {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 30px;
+  line-height: 30px;
+  color: #555;
+  margin-top: 10px;
+}
+.status.correct-msg { color: #2e7d32; }
+.status.wrong-msg { color: #c62828; }
+
+.screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.screen.show { opacity: 1; pointer-events: auto; }
+.screen h1 {
+  font-size: clamp(40px, 10vw, 56px);
+  font-weight: 900;
+  color: #ffd54f;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  margin-bottom: 6px;
+}
+.screen .sub {
+  font-size: 17px;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 14px;
+  text-align: center;
+  padding: 0 24px;
+  line-height: 1.5;
+}
+.screen .rule {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 36px;
+  text-align: center;
+  padding: 0 28px;
+  line-height: 1.7;
+}
+.screen .btn {
+  padding: 14px 52px;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: inherit;
+  border: 2px solid #ffd54f;
+  border-radius: 12px;
+  background: transparent;
+  color: #ffd54f;
+  cursor: pointer;
+  min-width: 220px;
+  transition: transform 0.15s, background 0.2s;
+}
+.screen .btn:hover { background: rgba(255,213,79,0.1); }
+.screen .btn:active { transform: scale(0.95); }
+.screen .btn.primary { background: #ffd54f; color: #333; }
+.screen .btn.primary:hover { background: #ffca28; }
+
+.end-score {
+  font-size: clamp(48px, 13vw, 72px);
+  font-weight: 900;
+  color: #fff;
+  margin: 10px 0 6px;
+}
+.end-score em {
+  font-style: normal;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffd54f;
+  display: block;
+  margin-bottom: 2px;
+  letter-spacing: 3px;
+}
+.breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  justify-content: center;
+  max-width: 360px;
+  margin-bottom: 30px;
+}
+.breakdown span {
+  font-size: 16px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 700;
+}
+.breakdown .ok { color: #81c784; }
+.breakdown .no { color: #e57373; }
+.btn-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+.btn-row .btn { padding: 11px 26px; font-size: 17px; min-width: 150px; }
+
+@media (max-width: 420px) {
+  #app { padding: 6px; }
+  .grid-wrap { padding: 5px; }
+  .grid { gap: 6px; }
+  .cell { border-radius: 7px; }
+  .cell.word-opt { font-size: 26px; }
+  .cell.meaning-opt { font-size: 14px; }
+  .top-bar { font-size: 13px; padding: 4px 2px 10px; }
+  .screen .btn { font-size: 17px; padding: 12px 40px; min-width: 190px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="top-bar">
+    <span class="score">&#9733; <span id="scoreDisplay">0</span></span>
+    <span class="progress" id="progressDisplay">1 / 18</span>
+  </div>
+
+  <div class="target-card" id="targetCard">
+    <div class="target-label" id="targetLabel">选出正确的意思</div>
+    <div class="target-word" id="targetWord"></div>
+    <div class="target-pinyin" id="targetPinyin"></div>
+    <div class="target-sentence" id="targetSentence" style="display:none"></div>
+  </div>
+
+  <div class="found-area" id="foundArea"></div>
+
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="status" id="statusMsg">选出正确答案</div>
+</div>
+
+<div class="screen" id="startScreen">
+  <h1>&#x8BCD;&#x8BED;&#x6311;&#x6218;</h1>
+  <div class="sub">词语辨析 · 意思与造句</div>
+  <div class="rule">看看上面的词语或句子，在格子里选出正确答案。
+  <br>每答对一题 +10 分。</div>
+  <button class="btn primary" id="startBtn">&#x5F00;&#x59CB;</button>
+</div>
+
+<div class="screen" id="endScreen">
+  <h1>&#x5B8C;&#x6210;&#xFF01;</h1>
+  <div class="sub" id="endSub">做得很棒！</div>
+  <div class="end-score"><em>总得分</em><span id="finalScore">0</span></div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="btn-row">
+    <button class="btn" id="menuBtn">&#x8FD4;&#x56DE;&#x5F00;&#x59CB;</button>
+    <button class="btn primary" id="replayBtn">&#x518D;&#x73A9;&#x4E00;&#x6B21;</button>
+  </div>
+</div>
+
+<script>
+const GROUPS = [
+  {
+    words: [
+      { word: '隆重', pinyin: 'lóng zhòng', meaning: '形容仪式或场面正式而庄严', sentence: '学校举行了一场隆重的毕业典礼。' },
+      { word: '盛大', pinyin: 'shèng dà', meaning: '形容规模大、场面热闹', sentence: '国庆节当天，广场上举行了盛大的庆祝活动。' },
+      { word: '靓丽', pinyin: 'liàng lì', meaning: '形容外表漂亮、光鲜', sentence: '她今天穿着一身靓丽的礼服出席晚宴。' }
+    ]
+  },
+  {
+    words: [
+      { word: '辱骂', pinyin: 'rǔ mà', meaning: '用粗鲁的话骂人，侮辱对方', sentence: '他因为一时冲动，辱骂了同学，事后十分后悔。' },
+      { word: '鄙视', pinyin: 'bǐ shì', meaning: '看不起、瞧不起', sentence: '大家都鄙视那种欺负弱小的行为。' },
+      { word: '诅咒', pinyin: 'zǔ zhòu', meaning: '用恶毒的话咒骂，希望对方遭遇不幸', sentence: '她气得诅咒那个骗她钱的人。' }
+    ]
+  },
+  {
+    words: [
+      { word: '洋溢', pinyin: 'yáng yì', meaning: '（气氛、感情等）充分流露、弥漫', sentence: '教室里洋溢着欢乐的气氛。' },
+      { word: '充满', pinyin: 'chōng mǎn', meaning: '装满、布满某种东西或情绪', sentence: '他的心中充满了对未来的希望。' },
+      { word: '增添', pinyin: 'zēng tiān', meaning: '增加、添加', sentence: '新买的窗帘为房间增添了几分温馨。' }
+    ]
+  },
+  {
+    words: [
+      { word: '难处', pinyin: 'nán chù', meaning: '难以处理的困难或苦衷', sentence: '每个人都有自己的难处，我们要多体谅别人。' },
+      { word: '折磨', pinyin: 'zhé mó', meaning: '使身体或精神受到痛苦', sentence: '长期的失眠让他备受折磨。' },
+      { word: '煎熬', pinyin: 'jiān áo', meaning: '形容内心极度痛苦，像被煎烤一样难受', sentence: '等待考试成绩的那几天，对他来说是一种煎熬。' }
+    ]
+  },
+  {
+    words: [
+      { word: '神圣', pinyin: 'shén shèng', meaning: '庄严不可侵犯，值得敬仰', sentence: '教育是一项神圣的事业。' },
+      { word: '杰出', pinyin: 'jié chū', meaning: '非常优秀、出色，超出一般水平', sentence: '他是一位杰出的科学家。' },
+      { word: '崇高', pinyin: 'chóng gāo', meaning: '伟大、令人敬仰', sentence: '医护人员救死扶伤的精神十分崇高。' }
+    ]
+  },
+  {
+    words: [
+      { word: '和善', pinyin: 'hé shàn', meaning: '性情温和、友善', sentence: '邻居阿姨为人和善，大家都很喜欢她。' },
+      { word: '慈祥', pinyin: 'cí xiáng', meaning: '形容长辈神情、态度温和亲切', sentence: '奶奶总是用慈祥的目光看着我们。' },
+      { word: '关注', pinyin: 'guān zhù', meaning: '重视并加以留意', sentence: '老师非常关注学生的学习进度。' }
+    ]
+  }
+];
+
+const ALL_WORDS = GROUPS.flatMap(g => g.words);
+
+const gridEl = document.getElementById('grid');
+const statusMsg = document.getElementById('statusMsg');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const progressDisplay = document.getElementById('progressDisplay');
+const targetLabel = document.getElementById('targetLabel');
+const targetWord = document.getElementById('targetWord');
+const targetPinyin = document.getElementById('targetPinyin');
+const targetSentence = document.getElementById('targetSentence');
+const foundArea = document.getElementById('foundArea');
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+const finalScore = document.getElementById('finalScore');
+const endSub = document.getElementById('endSub');
+const breakdown = document.getElementById('breakdown');
+
+let rounds = [];
+let roundIndex = 0;
+let score = 0;
+let optionElements = [];
+let currentRound = null;
+let results = [];
+let wrongThisRound = false;
+let state = 'idle';
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.random() * (i + 1) | 0;
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function updateStatus(msg, cls) {
+  statusMsg.textContent = msg;
+  statusMsg.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+function currentGroupOf(word) {
+  return GROUPS.find(g => g.words.includes(word));
+}
+
+function pickRandomOtherMeaning(currentWord) {
+  const og = currentGroupOf(currentWord);
+  const otherGroups = GROUPS.filter(g => g !== og);
+  const g = otherGroups[Math.random() * otherGroups.length | 0];
+  return g.words[Math.random() * g.words.length | 0].meaning;
+}
+
+function pickRandomOtherWord(currentWord) {
+  const og = currentGroupOf(currentWord);
+  const otherGroups = GROUPS.filter(g => g !== og);
+  const g = otherGroups[Math.random() * otherGroups.length | 0];
+  return g.words[Math.random() * g.words.length | 0].word;
+}
+
+function blankSentence(sentence, word) {
+  return sentence.split(word).join('<span class="blank-slot"></span>');
+}
+
+function buildRounds() {
+  rounds = [];
+  for (const group of GROUPS) {
+    for (const w of group.words) {
+      const type = Math.random() < 0.5 ? 'meaning' : 'sentence';
+      rounds.push({ group, word: w, type });
+    }
+  }
+  rounds = shuffle(rounds);
+}
+
+function loadRound() {
+  currentRound = rounds[roundIndex];
+  const r = currentRound;
+  state = 'play';
+  wrongThisRound = false;
+
+  foundArea.innerHTML = '';
+  updateStatus('选出正确答案', '');
+
+  const isMeaning = r.type === 'meaning';
+  targetLabel.textContent = isMeaning ? '选出下面词语的正确意思' : '选出最适合填入横线的词语';
+  targetWord.style.display = isMeaning ? '' : 'none';
+  targetPinyin.style.display = isMeaning ? '' : 'none';
+  targetSentence.style.display = isMeaning ? 'none' : '';
+  if (isMeaning) {
+    targetWord.textContent = r.word.word;
+    targetPinyin.textContent = r.word.pinyin;
+  } else {
+    targetSentence.innerHTML = blankSentence(r.word.sentence, r.word.word);
+  }
+
+  let options;
+  if (isMeaning) {
+    const mates = r.group.words.filter(w => w !== r.word);
+    const optionsPool = [
+      r.word.meaning,
+      mates[0].meaning,
+      mates[1].meaning,
+      pickRandomOtherMeaning(r.word)
+    ];
+    options = shuffle(optionsPool);
+  } else {
+    const mates = r.group.words.filter(w => w !== r.word);
+    const optionsPool = [
+      r.word.word,
+      mates[0].word,
+      mates[1].word,
+      pickRandomOtherWord(r.word)
+    ];
+    options = shuffle(optionsPool);
+  }
+
+  gridEl.innerHTML = '';
+  optionElements = [];
+  for (let i = 0; i < options.length; i++) {
+    const div = document.createElement('div');
+    div.className = 'cell ' + (isMeaning ? 'meaning-opt' : 'word-opt');
+    div.textContent = options[i];
+    div.addEventListener('click', () => handleCellClick(i));
+    gridEl.appendChild(div);
+    optionElements.push(div);
+  }
+
+  updateProgress();
+}
+
+function handleCellClick(index) {
+  if (state !== 'play') return;
+  const el = optionElements[index];
+  const r = currentRound;
+  const isMeaning = r.type === 'meaning';
+  const isCorrect = el.textContent === (isMeaning ? r.word.meaning : r.word.word);
+
+  if (isCorrect) {
+    state = 'feedback';
+    el.classList.add('correct');
+    score += 10;
+    scoreDisplay.textContent = score;
+    const chip = document.createElement('div');
+    chip.className = 'found-chip';
+    chip.textContent = isMeaning
+      ? r.word.word + ' — ' + r.word.sentence
+      : r.word.word + ' — ' + r.word.meaning;
+    foundArea.appendChild(chip);
+    updateStatus('答对了！+' + 10 + ' 分', 'correct-msg');
+    setTimeout(nextRound, 1700);
+  } else {
+    wrongThisRound = true;
+    el.classList.add('wrong');
+    setTimeout(() => el.classList.remove('wrong'), 450);
+    updateStatus('不对，再想想', 'wrong-msg');
+  }
+}
+
+function nextRound() {
+  results.push({ word: currentRound.word.word, ok: !wrongThisRound });
+  roundIndex++;
+  if (roundIndex >= rounds.length) {
+    showEnd();
+    return;
+  }
+  loadRound();
+}
+
+function updateProgress() {
+  progressDisplay.textContent = (roundIndex + 1) + ' / ' + rounds.length;
+}
+
+function startGame() {
+  startScreen.classList.remove('show');
+  endScreen.classList.remove('show');
+  buildRounds();
+  roundIndex = 0;
+  score = 0;
+  results = [];
+  scoreDisplay.textContent = '0';
+  loadRound();
+}
+
+function showEnd() {
+  state = 'idle';
+  const okCount = results.filter(r => r.ok).length;
+  endSub.textContent = okCount === results.length
+    ? '全部零失误，太厉害了！'
+    : '做得很棒，继续加油！';
+  finalScore.textContent = score;
+  breakdown.innerHTML = '';
+  results.forEach(r => {
+    const span = document.createElement('span');
+    span.className = r.ok ? 'ok' : 'no';
+    span.textContent = r.word + ' ' + (r.ok ? '\u2713' : '\u2717');
+    breakdown.appendChild(span);
+  });
+  endScreen.classList.add('show');
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('replayBtn').addEventListener('click', startGame);
+document.getElementById('menuBtn').addEventListener('click', () => {
+  endScreen.classList.remove('show');
+  startScreen.classList.add('show');
+});
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (endScreen.classList.contains('show')) document.getElementById('replayBtn').click();
+    else if (startScreen.classList.contains('show')) document.getElementById('startBtn').click();
+  }
+});
+
+startScreen.classList.add('show');
+</script>
+</body>
+</html>
