@@ -360,6 +360,34 @@ const UNSAFE = {
   '坚强': ['意志']
 };
 
+const ANSWER_PINYIN = {
+  '克服': 'kè fú',
+  '战胜': 'zhàn shèng',
+  '锻炼': 'duàn liàn',
+  '放松': 'fàng sōng',
+  '控制': 'kòng zhì',
+  '尽力': 'jìn lì',
+  '要求': 'yāo qiú',
+  '懒惰': 'lǎn duò',
+  '临时': 'lín shí',
+  '鲜艳': 'xiān yàn',
+  '不停': 'bù tíng',
+  '挺起': 'tǐng qǐ',
+  '动作': 'dòng zuò',
+  '顽强': 'wán qiáng',
+  '烈日': 'liè rì',
+  '暴雨': 'bào yǔ',
+  '狂风': 'kuáng fēng',
+  '大雪': 'dà xuě',
+  '不屈': 'bù qū',
+  '勇敢': 'yǒng gǎn',
+  '环境': 'huán jìng',
+  '意志': 'yì zhì',
+  '树立': 'shù lì',
+  '胸有': 'xiōng yǒu',
+  '清晰': 'qīng xī'
+};
+
 const ALL_ANSWERS = DATA.map(d => d.answer);
 const GENERIC = ['田野', '花朵', '湖水', '书桌', '掌声', '面条', '商店', '墙壁', '蛋糕', '手机', '沙发', '窗户', '口袋', '糖果', '铅笔', '书包', '苹果', '报纸', '椅子', '桌子'];
 
@@ -398,31 +426,43 @@ function updateStatus(msg, cls) {
   statusMsg.className = 'status' + (cls ? ' ' + cls : '');
 }
 
-function buildDistractorPool(d) {
-  const unsafe = UNSAFE[d.base] || [];
-  const fromOthers = ALL_ANSWERS.filter(a => a !== d.answer && !unsafe.includes(a));
-  const generics = GENERIC.filter(g => g !== d.answer && !unsafe.includes(g));
+function displayOf(d) {
+  const flipped = !!d.flipped;
+  return {
+    flipped,
+    base: flipped ? d.answer : d.base,
+    answer: flipped ? d.base : d.answer
+  };
+}
+
+function buildDistractorPool(displayedBase, answer) {
+  const unsafe = UNSAFE[displayedBase] || [];
+  const fromOthers = ALL_ANSWERS.filter(a => a !== answer && !unsafe.includes(a));
+  const generics = GENERIC.filter(g => g !== answer && !unsafe.includes(g));
   return [...new Set([...fromOthers, ...generics])];
 }
 
 function loadRound() {
   const d = rounds[roundIndex];
+  const disp = displayOf(d);
   wrongThisRound = false;
   state = 'play';
 
-  targetPhrase.innerHTML = '<span class="blank-slot">____</span>' + d.connector + d.base;
-  targetPinyin.textContent = d.basePinyin;
+  targetPhrase.innerHTML = disp.flipped
+    ? disp.base + '<span class="blank-slot">____</span>'
+    : '<span class="blank-slot">____</span>' + d.connector + disp.base;
+  targetPinyin.textContent = disp.base === d.base ? d.basePinyin : (ANSWER_PINYIN[d.answer] || d.basePinyin);
   foundArea.innerHTML = '';
   updateStatus('找出正确的搭配', '');
 
-  const distractors = shuffle(buildDistractorPool(d)).slice(0, 8);
-  const chars = shuffle([d.answer, ...distractors]);
+  const distractors = shuffle(buildDistractorPool(disp.base, disp.answer)).slice(0, 8);
+  const chars = shuffle([disp.answer, ...distractors]);
 
   gridEl.innerHTML = '';
   cellElements = [];
   gridCells = chars.map((ch, i) => ({
     char: ch,
-    isAnswer: ch === d.answer,
+    isAnswer: ch === disp.answer,
     found: false,
     index: i
   }));
@@ -445,12 +485,15 @@ function handleCellClick(index) {
   if (cell.found) return;
   const el = cellElements[index];
   const d = rounds[roundIndex];
+  const disp = displayOf(d);
 
   if (cell.isAnswer) {
     cell.found = true;
     el.classList.add('correct');
     el.style.pointerEvents = 'none';
-    targetPhrase.innerHTML = '<span class="filled-answer">' + d.answer + '</span>' + d.connector + d.base;
+    targetPhrase.innerHTML = disp.flipped
+      ? disp.base + '<span class="filled-answer">' + disp.answer + '</span>'
+      : '<span class="filled-answer">' + disp.answer + '</span>' + d.connector + disp.base;
     addFoundChip(d);
     score += 10;
     scoreDisplay.textContent = score;
@@ -490,6 +533,7 @@ function startGame() {
   startScreen.classList.remove('show');
   endScreen.classList.remove('show');
   rounds = shuffle([...DATA]);
+  rounds.forEach(r => { if (r.connector === '' && r.base.length === 2) r.flipped = Math.random() < 0.5; });
   roundIndex = 0;
   score = 0;
   results = [];
