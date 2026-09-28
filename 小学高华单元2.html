@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>小学高华单元2 — 词语搭配挑战</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  background: #f0ebe3;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  overflow: hidden;
+}
+#app {
+  width: 100%;
+  max-width: 520px;
+  padding: 12px;
+  position: relative;
+}
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px 12px;
+  font-size: 15px;
+  color: #555;
+  font-weight: 700;
+}
+.top-bar .score { color: #2a7a3e; font-size: 18px; }
+.top-bar .progress { color: #888; }
+
+.target-card {
+  background: linear-gradient(135deg, #fb8c00, #f57c00);
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(245,124,0,0.28);
+  margin-bottom: 6px;
+}
+.target-card .target-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.target-card .target-phrase {
+  font-size: clamp(30px, 9vw, 50px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.35;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  letter-spacing: 3px;
+  min-height: 1.35em;
+}
+.target-card .target-phrase .blank-slot {
+  display: inline-block;
+  min-width: 2.3em;
+  border-bottom: 4px solid #fff;
+  margin: 0 3px;
+  vertical-align: bottom;
+  color: rgba(255,255,255,0);
+}
+.target-card .target-phrase .filled-answer {
+  color: #fff;
+}
+.target-card .target-pinyin {
+  font-size: 14px;
+  color: #fff3e0;
+  font-weight: 700;
+  letter-spacing: 2px;
+  min-height: 20px;
+}
+
+.found-area {
+  min-height: 34px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 0 0 10px;
+}
+.found-chip {
+  background: #c8e6c9;
+  color: #2e7d32;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 17px;
+  font-weight: 700;
+  animation: chipPop 0.25s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.found-chip small {
+  font-weight: 400;
+  color: #4a844e;
+  font-size: 12px;
+  margin-left: 4px;
+}
+@keyframes chipPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.grid-wrap {
+  background: #e6dfd5;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  aspect-ratio: 1;
+}
+.cell {
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(24px, 6.2vw, 34px);
+  font-weight: 700;
+  color: #222;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, opacity 0.25s;
+  aspect-ratio: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.cell:hover { background: #fde8c8; }
+.cell:active { transform: scale(0.92); }
+.cell.correct {
+  background: #66bb6a !important;
+  color: #fff !important;
+  cursor: default;
+  box-shadow: 0 2px 8px rgba(102,187,106,0.5);
+  animation: popRight 0.3s ease;
+}
+.cell.wrong {
+  background: #ef5350 !important;
+  color: #fff !important;
+  animation: shake 0.4s ease;
+}
+@keyframes popRight {
+  0% { transform: scale(0.6); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+.status {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 30px;
+  line-height: 30px;
+  color: #555;
+  margin-top: 10px;
+}
+.status.correct-msg { color: #2e7d32; }
+.status.wrong-msg { color: #c62828; }
+
+.screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.screen.show { opacity: 1; pointer-events: auto; }
+.screen h1 {
+  font-size: clamp(34px, 9vw, 52px);
+  font-weight: 900;
+  color: #ffd54f;
+  letter-spacing: 3px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  margin-bottom: 6px;
+  text-align: center;
+}
+.screen .sub {
+  font-size: 17px;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 14px;
+  text-align: center;
+  padding: 0 24px;
+  line-height: 1.5;
+}
+.screen .rule {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 36px;
+  text-align: center;
+  padding: 0 28px;
+  line-height: 1.6;
+}
+.screen .btn {
+  padding: 14px 52px;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: inherit;
+  border: 2px solid #ffd54f;
+  border-radius: 12px;
+  background: transparent;
+  color: #ffd54f;
+  cursor: pointer;
+  min-width: 220px;
+  transition: transform 0.15s, background 0.2s;
+}
+.screen .btn:hover { background: rgba(255,213,79,0.1); }
+.screen .btn:active { transform: scale(0.95); }
+.screen .btn.primary { background: #ffd54f; color: #333; }
+.screen .btn.primary:hover { background: #ffca28; }
+
+.end-score {
+  font-size: clamp(48px, 13vw, 72px);
+  font-weight: 900;
+  color: #fff;
+  margin: 10px 0 6px;
+}
+.end-score em {
+  font-style: normal;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffd54f;
+  display: block;
+  margin-bottom: 2px;
+  letter-spacing: 3px;
+}
+.breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  justify-content: center;
+  max-width: 360px;
+  margin-bottom: 30px;
+}
+.breakdown span {
+  font-size: 16px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 700;
+}
+.breakdown .ok { color: #81c784; }
+.breakdown .no { color: #e57373; }
+.btn-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+.btn-row .btn { padding: 11px 26px; font-size: 17px; min-width: 150px; }
+
+@media (max-width: 420px) {
+  #app { padding: 6px; }
+  .grid-wrap { padding: 5px; }
+  .grid { gap: 4px; }
+  .cell { font-size: 19px; border-radius: 5px; }
+  .target-card .target-phrase { letter-spacing: 2px; }
+  .top-bar { font-size: 13px; padding: 4px 2px 10px; }
+  .found-chip { font-size: 15px; }
+  .screen .btn { font-size: 17px; padding: 12px 40px; min-width: 190px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="top-bar">
+    <span class="score">&#9733; <span id="scoreDisplay">0</span></span>
+    <span class="progress" id="progressDisplay">1 / 29</span>
+  </div>
+
+  <div class="target-card">
+    <div class="target-label">选出能填进横线、形成正确搭配的词</div>
+    <div class="target-phrase" id="targetPhrase"></div>
+    <div class="target-pinyin" id="targetPinyin"></div>
+  </div>
+
+  <div class="found-area" id="foundArea"></div>
+
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="status" id="statusMsg">找出正确的搭配</div>
+</div>
+
+<div class="screen" id="startScreen">
+  <h1>&#x5C0F;&#x5B66;&#x9AD8;&#x534E;&#x5355;&#x5143;2</h1>
+  <div class="sub">词语搭配挑战</div>
+  <div class="rule">看看下面的词组，在格子里找出能填进横线、形成正确搭配的词语。
+  <br>每答对一个 +10 分。</div>
+  <button class="btn primary" id="startBtn">&#x5F00;&#x59CB;</button>
+</div>
+
+<div class="screen" id="endScreen">
+  <h1>&#x5B8C;&#x6210;&#xFF01;</h1>
+  <div class="sub" id="endSub">做得很棒！</div>
+  <div class="end-score"><em>总得分</em><span id="finalScore">0</span></div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="btn-row">
+    <button class="btn" id="menuBtn">&#x8FD4;&#x56DE;&#x5F00;&#x59CB;</button>
+    <button class="btn primary" id="replayBtn">&#x518D;&#x73A9;&#x4E00;&#x6B21;</button>
+  </div>
+</div>
+
+<script>
+const DATA = [
+  { phrase: '祖孙同乐', pinyin: 'zǔ sūn tóng lè', parts: ['祖孙', '同乐'], partPinyin: ['zǔ sūn', 'tóng lè'] },
+  { phrase: '拨打电话', pinyin: 'bō dǎ diàn huà', parts: ['拨打', '电话'], partPinyin: ['bō dǎ', 'diàn huà'] },
+  { phrase: '智能手机', pinyin: 'zhì néng shǒu jī', parts: ['智能', '手机'], partPinyin: ['zhì néng', 'shǒu jī'] },
+  { phrase: '打好基础', pinyin: 'dǎ hǎo jī chǔ', parts: ['打好', '基础'], partPinyin: ['dǎ hǎo', 'jī chǔ'] },
+  { phrase: '一蹦一跳', pinyin: 'yī bèng yī tiào', parts: ['一蹦', '一跳'], partPinyin: ['yī bèng', 'yī tiào'] },
+  { phrase: '反应迅速', pinyin: 'fǎn yìng xùn sù', parts: ['反应', '迅速'], partPinyin: ['fǎn yìng', 'xùn sù'] },
+  { phrase: '挽起袖子', pinyin: 'wǎn qǐ xiù zi', parts: ['挽起', '袖子'], partPinyin: ['wǎn qǐ', 'xiù zi'] },
+  { phrase: '踩着积水', pinyin: 'cǎi zhe jī shuǐ', parts: ['踩着', '积水'], partPinyin: ['cǎi zhe', 'jī shuǐ'] },
+  { phrase: '向前倾斜', pinyin: 'xiàng qián qīng xié', parts: ['向前', '倾斜'], partPinyin: ['xiàng qián', 'qīng xié'] },
+  { phrase: '密密麻麻', pinyin: 'mì mì má má', parts: ['密密', '麻麻'], partPinyin: ['mì mì', 'má má'] },
+  { phrase: '字体歪斜', pinyin: 'zì tǐ wāi xié', parts: ['字体', '歪斜'], partPinyin: ['zì tǐ', 'wāi xié'] },
+  { phrase: '疑惑不解', pinyin: 'yí huò bù jiě', parts: ['疑惑', '不解'], partPinyin: ['yí huò', 'bù jiě'] },
+  { phrase: '笑而不语', pinyin: 'xiào ér bù yǔ', parts: ['笑而', '不语'], partPinyin: ['xiào ér', 'bù yǔ'] },
+  { phrase: '扑到怀里', pinyin: 'pū dào huái lǐ', parts: ['扑到', '怀里'], partPinyin: ['pū dào', 'huái lǐ'] },
+  { phrase: '遮风挡雨', pinyin: 'zhē fēng dǎng yǔ', parts: ['遮风', '挡雨'], partPinyin: ['zhē fēng', 'dǎng yǔ'] },
+  { phrase: '不知不觉', pinyin: 'bù zhī bù jué', parts: ['不知', '不觉'], partPinyin: ['bù zhī', 'bù jué'] },
+  { phrase: '微微抖动', pinyin: 'wēi wēi dǒu dòng', parts: ['微微', '抖动'], partPinyin: ['wēi wēi', 'dǒu dòng'] },
+  { phrase: '闪着泪光', pinyin: 'shǎn zhe lèi guāng', parts: ['闪着', '泪光'], partPinyin: ['shǎn zhe', 'lèi guāng'] },
+  { phrase: '无限温情', pinyin: 'wú xiàn wēn qíng', parts: ['无限', '温情'], partPinyin: ['wú xiàn', 'wēn qíng'] },
+  { phrase: '幽默乐观', pinyin: 'yōu mò lè guān', parts: ['幽默', '乐观'], partPinyin: ['yōu mò', 'lè guān'] },
+  { phrase: '了如指掌', pinyin: 'liǎo rú zhǐ zhǎng', parts: ['了如', '指掌'], partPinyin: ['liǎo rú', 'zhǐ zhǎng'] },
+  { phrase: '浑身湿透', pinyin: 'hún shēn shī tòu', parts: ['浑身', '湿透'], partPinyin: ['hún shēn', 'shī tòu'] },
+  { phrase: '发扬传统美德', pinyin: 'fā yáng chuán tǒng měi dé', parts: ['发扬', '传统', '美德'], partPinyin: ['fā yáng', 'chuán tǒng', 'měi dé'] },
+  { phrase: '促进家庭和谐', pinyin: 'cù jìn jiā tíng hé xié', parts: ['促进', '家庭', '和谐'], partPinyin: ['cù jìn', 'jiā tíng', 'hé xié'] },
+  { phrase: '灰蒙蒙', pinyin: 'huī méng méng', parts: ['灰', '蒙蒙'], partPinyin: ['huī', 'méng méng'], blankFixed: 1 },
+  { phrase: '笑眯眯', pinyin: 'xiào mī mī', parts: ['笑', '眯眯'], partPinyin: ['xiào', 'mī mī'], blankFixed: 1 },
+  { phrase: '打喷嚏', pinyin: 'dǎ pēn tì', parts: ['打', '喷嚏'], partPinyin: ['dǎ', 'pēn tì'], blankFixed: 1 },
+  { phrase: '吃撑了肚子', pinyin: 'chī chēng le dù zi', parts: ['吃撑', '肚子'], partPinyin: ['chī chēng', 'dù zi'], connector: '了', blankFixed: 0 },
+  { phrase: '每逢佳节倍思亲', pinyin: 'méi féng jiā jié bèi sī qīn', parts: ['每逢', '佳节', '倍思', '亲'], partPinyin: ['méi féng', 'jiā jié', 'bèi sī', 'qīn'], blankFixed: 1 }
+];
+
+const UNSAFE = {
+  '拨打': ['手机'],
+  '手机': ['拨打'],
+  '智能': ['电话'],
+  '电话': ['智能'],
+  '传统': ['家庭', '佳节'],
+  '家庭': ['传统']
+};
+
+const ALL_WORDS = [...new Set(DATA.flatMap(d => d.parts).filter(w => w.length === 2))];
+const GENERIC = ['田野', '花朵', '湖水', '书桌', '掌声', '面条', '商店', '墙壁', '蛋糕', '沙发', '窗户', '口袋', '糖果', '铅笔', '书包', '苹果', '报纸', '椅子', '桌子', '天空'];
+
+const targetPhrase = document.getElementById('targetPhrase');
+const targetPinyin = document.getElementById('targetPinyin');
+const gridEl = document.getElementById('grid');
+const statusMsg = document.getElementById('statusMsg');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const progressDisplay = document.getElementById('progressDisplay');
+const foundArea = document.getElementById('foundArea');
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+const finalScore = document.getElementById('finalScore');
+const endSub = document.getElementById('endSub');
+const breakdown = document.getElementById('breakdown');
+
+let rounds = [];
+let roundIndex = 0;
+let score = 0;
+let gridCells = [];
+let cellElements = [];
+let currentRound = null;
+let wrongThisRound = false;
+let results = [];
+let state = 'idle';
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.random() * (i + 1) | 0;
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function updateStatus(msg, cls) {
+  statusMsg.textContent = msg;
+  statusMsg.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+function buildRound(entry) {
+  const n = entry.parts.length;
+  const blankIndex = entry.blankFixed != null ? entry.blankFixed : (Math.random() * n | 0);
+  return {
+    entry,
+    blankIndex,
+    answer: entry.parts[blankIndex],
+    before: entry.parts.slice(0, blankIndex),
+    after: entry.parts.slice(blankIndex + 1)
+  };
+}
+
+function renderPhrase(r, filled) {
+  const text = r.before.join('') + (filled ? r.answer : '') + (r.entry.connector || '') + r.after.join('');
+  if (!filled) {
+    return r.before.join('') + '<span class="blank-slot">____</span>' + (r.entry.connector || '') + r.after.join('');
+  }
+  return r.before.join('') + '<span class="filled-answer">' + r.answer + '</span>' + (r.entry.connector || '') + r.after.join('');
+}
+
+function buildDistractorPool(r) {
+  const displayed = r.entry.parts.filter(p => p !== r.answer);
+  const unsafe = [...new Set(displayed.flatMap(w => UNSAFE[w] || []))];
+  const fromWords = ALL_WORDS.filter(w => w !== r.answer && !unsafe.includes(w));
+  const generics = GENERIC.filter(g => g !== r.answer && !unsafe.includes(g));
+  return [...new Set([...fromWords, ...generics])];
+}
+
+function loadRound() {
+  const r = rounds[roundIndex];
+  currentRound = r;
+  wrongThisRound = false;
+  state = 'play';
+
+  targetPhrase.innerHTML = renderPhrase(r, false);
+  targetPinyin.textContent = r.entry.partPinyin.filter((p, i) => i !== r.blankIndex).join(' ');
+  foundArea.innerHTML = '';
+  updateStatus('找出正确的搭配', '');
+
+  const distractors = shuffle(buildDistractorPool(r)).slice(0, 8);
+  const chars = shuffle([r.answer, ...distractors]);
+
+  gridEl.innerHTML = '';
+  cellElements = [];
+  gridCells = chars.map((ch, i) => ({
+    char: ch,
+    isAnswer: ch === r.answer,
+    found: false,
+    index: i
+  }));
+
+  for (let i = 0; i < gridCells.length; i++) {
+    const div = document.createElement('div');
+    div.className = 'cell';
+    div.textContent = gridCells[i].char;
+    div.addEventListener('click', () => handleCellClick(i));
+    gridEl.appendChild(div);
+    cellElements.push(div);
+  }
+
+  updateProgress();
+}
+
+function handleCellClick(index) {
+  if (state !== 'play') return;
+  const cell = gridCells[index];
+  if (cell.found) return;
+  const el = cellElements[index];
+  const r = currentRound;
+
+  if (cell.isAnswer) {
+    cell.found = true;
+    el.classList.add('correct');
+    el.style.pointerEvents = 'none';
+    targetPhrase.innerHTML = renderPhrase(r, true);
+    addFoundChip(r);
+    score += 10;
+    scoreDisplay.textContent = score;
+    state = 'feedback';
+    updateStatus('答对了！+' + 10 + ' 分', 'correct-msg');
+    setTimeout(nextRound, 1500);
+  } else {
+    wrongThisRound = true;
+    el.classList.add('wrong');
+    setTimeout(() => el.classList.remove('wrong'), 450);
+    updateStatus('不对，再想想', 'wrong-msg');
+  }
+}
+
+function addFoundChip(r) {
+  const chip = document.createElement('div');
+  chip.className = 'found-chip';
+  chip.innerHTML = r.entry.phrase + ' <small>' + r.entry.pinyin + '</small>';
+  foundArea.appendChild(chip);
+}
+
+function nextRound() {
+  results.push({ ok: !wrongThisRound, text: currentRound.entry.phrase });
+  roundIndex++;
+  if (roundIndex >= rounds.length) {
+    showEnd();
+    return;
+  }
+  loadRound();
+}
+
+function updateProgress() {
+  progressDisplay.textContent = (roundIndex + 1) + ' / ' + rounds.length;
+}
+
+function startGame() {
+  startScreen.classList.remove('show');
+  endScreen.classList.remove('show');
+  rounds = shuffle([...DATA]).map(buildRound);
+  roundIndex = 0;
+  score = 0;
+  results = [];
+  scoreDisplay.textContent = '0';
+  loadRound();
+}
+
+function showEnd() {
+  state = 'idle';
+  const okCount = results.filter(r => r.ok).length;
+  endSub.textContent = okCount === results.length
+    ? '全部零失误，太厉害了！'
+    : '做得很棒，继续加油！';
+  finalScore.textContent = score;
+  breakdown.innerHTML = '';
+  results.forEach(r => {
+    const span = document.createElement('span');
+    span.className = r.ok ? 'ok' : 'no';
+    span.textContent = r.text + ' ' + (r.ok ? '\u2713' : '\u2717');
+    breakdown.appendChild(span);
+  });
+  endScreen.classList.add('show');
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('replayBtn').addEventListener('click', startGame);
+document.getElementById('menuBtn').addEventListener('click', () => {
+  endScreen.classList.remove('show');
+  startScreen.classList.add('show');
+});
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (endScreen.classList.contains('show')) replayBtn.click();
+    else if (startScreen.classList.contains('show')) document.getElementById('startBtn').click();
+  }
+});
+
+startScreen.classList.add('show');
+</script>
+</body>
+</html>
